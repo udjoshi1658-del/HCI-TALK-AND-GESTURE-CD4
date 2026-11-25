@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Talk & Gesture — 3D Editor</title>
+</head>
+<body>
+  <header>
+    <h1>Talk & Gesture</h1>
+    <p>Drag to look around · Scroll to zoom</p>
+  </header>
+
+  <aside id="object-panel">
+  <h2>Add furniture</h2>
+
+  <button data-add="sofa">+ Sofa</button>
+  <button data-add="table">+ Table</button>
+  <button data-add="lamp">+ Lamp</button>
+
+  <hr />
+
+  <button id="delete-object">Delete selected</button>
+  <button id="undo-action">Undo</button>
+</aside>
+
+<div id="edit-toolbar">
+  <button data-direction="left">← Left</button>
+  <button data-direction="right">Right →</button>
+  <button data-direction="backward">Further</button>
+  <button data-direction="forward">Closer</button>
+
+  <button id="rotate-object">Rotate 15°</button>
+  <button id="grow-object">Larger +</button>
+  <button id="shrink-object">Smaller −</button>
+
+  <label for="object-color">Colour:</label>
+  <select id="object-color">
+    <option value="">Choose colour</option>
+    <option value="red">Red</option>
+    <option value="blue">Blue</option>
+    <option value="green">Green</option>
+    <option value="yellow">Yellow</option>
+    <option value="white">White</option>
+    <option value="black">Black</option>
+    <option value="purple">Purple</option>
+    <option value="orange">Orange</option>
+    <option value="brown">Brown</option>
+  </select>
+</div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

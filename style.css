@@ -1,0 +1,114 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #e8edf2;
+}
+
+canvas {
+  display: block;
+}
+
+header {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 16px 22px;
+  border-radius: 12px;
+  background: #142438;
+  color: white;
+  pointer-events: none;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+p {
+  margin: 0;
+  font-size: 13px;
+  color: #c4cfdd;
+}
+
+#object-panel {
+  position: absolute;
+  top: 125px;
+  left: 20px;
+  width: 180px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #142438;
+  color: white;
+}
+
+#object-panel h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+#object-panel button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #53657b;
+  border-radius: 6px;
+  background: #253b54;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+#object-panel button:hover {
+  background: #365779;
+}
+
+#object-panel button:focus-visible {
+  outline: 2px solid #70b7ff;
+  outline-offset: 2px;
+}
+
+#object-panel hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid #53657b;
+}
+
+#edit-toolbar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 200px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #142438;
+  color: white;
+}
+
+#edit-toolbar button,
+#edit-toolbar select {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #53657b;
+  border-radius: 6px;
+  background: #253b54;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+#edit-toolbar button:hover {
+  background: #365779;
+}
+
+#edit-toolbar label {
+  display: block;
+  margin-top: 16px;
+}
