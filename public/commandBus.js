@@ -11,6 +11,7 @@ const VALID_ACTIONS = [
   "select", "move", "rotate", "scale", "recolor", "undo",
   "grab", "drag", "release", "gesture", "rotation-start", "rotate-gesture", "rotation-end",
   "add", "delete", "clear", "reset", "deselect",
+  "zoom-start", "zoom", "zoom-end", "scale-start", "scale-drag", "scale-end", "revert",
 ];
 
 let nextId = 1;
