@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Talk & Gesture — 3D Editor</title>
-  <script type="module" crossorigin src="./assets/index-DTArYXbQ.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DFIua9fS.css">
+  <script type="module" crossorigin src="./assets/index-BW92wWin.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-5hFMLhUX.css">
 </head>
 <body>
   <header>
@@ -14,42 +14,59 @@
   </header>
 
   <aside id="object-panel">
-  <h2>Add furniture</h2>
+    <h2>Furniture</h2>
 
-  <button data-add="sofa">+ Sofa</button>
-  <button data-add="table">+ Table</button>
-  <button data-add="lamp">+ Lamp</button>
+    <button data-add="sofa">+ Sofa</button>
+    <button data-add="table">+ Table</button>
+    <button data-add="lamp">+ Lamp</button>
 
-  <hr />
+    <hr />
 
-  <button id="delete-object">Delete selected</button>
-  <button id="undo-action">Undo</button>
-</aside>
+    <button id="delete-object">Delete selected</button>
+    <button id="undo-action">Undo</button>
 
-<div id="edit-toolbar">
-  <button data-direction="left">← Left</button>
-  <button data-direction="right">Right →</button>
-  <button data-direction="backward">Further</button>
-  <button data-direction="forward">Closer</button>
+    <hr />
 
-  <button id="rotate-object">Rotate 15°</button>
-  <button id="grow-object">Larger +</button>
-  <button id="shrink-object">Smaller −</button>
+    <div id="swatches" role="group" aria-label="Colour">
+      <button data-color="red" aria-label="Red" style="background:#c94f4f"></button>
+      <button data-color="blue" aria-label="Blue" style="background:#326b96"></button>
+      <button data-color="green" aria-label="Green" style="background:#50865b"></button>
+      <button data-color="yellow" aria-label="Yellow" style="background:#e7bc46"></button>
+      <button data-color="white" aria-label="White" style="background:#eeeeee"></button>
+      <button data-color="black" aria-label="Black" style="background:#303030"></button>
+      <button data-color="purple" aria-label="Purple" style="background:#8559a5"></button>
+      <button data-color="orange" aria-label="Orange" style="background:#d78338"></button>
+      <button data-color="brown" aria-label="Brown" style="background:#654321"></button>
+    </div>
 
-  <label for="object-color">Colour:</label>
-  <select id="object-color">
-    <option value="">Choose colour</option>
-    <option value="red">Red</option>
-    <option value="blue">Blue</option>
-    <option value="green">Green</option>
-    <option value="yellow">Yellow</option>
-    <option value="white">White</option>
-    <option value="black">Black</option>
-    <option value="purple">Purple</option>
-    <option value="orange">Orange</option>
-    <option value="brown">Brown</option>
-  </select>
-</div>
+    <details id="more-controls">
+      <summary>More controls</summary>
+      <div id="edit-toolbar">
+        <button data-direction="left">← Left</button>
+        <button data-direction="right">Right →</button>
+        <button data-direction="backward">Further</button>
+        <button data-direction="forward">Closer</button>
+
+        <button id="rotate-object">Rotate 15°</button>
+        <button id="grow-object">Larger +</button>
+        <button id="shrink-object">Smaller −</button>
+
+        <label for="object-color">Colour:</label>
+        <select id="object-color">
+          <option value="">Choose colour</option>
+          <option value="red">Red</option>
+          <option value="blue">Blue</option>
+          <option value="green">Green</option>
+          <option value="yellow">Yellow</option>
+          <option value="white">White</option>
+          <option value="black">Black</option>
+          <option value="purple">Purple</option>
+          <option value="orange">Orange</option>
+          <option value="brown">Brown</option>
+        </select>
+      </div>
+    </details>
+  </aside>
 
 </body>
 </html>
