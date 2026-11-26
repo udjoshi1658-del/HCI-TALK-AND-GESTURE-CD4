@@ -1,10 +1,6 @@
 // Bridge between the Talk & Gesture controls and the embedded 3D editor.
 const frame = document.getElementById('editor-frame');
 const mount = document.getElementById('threejs-mount');
-const note = document.querySelector('.editor-panel .integration-note');
-const noteIcon = note ? note.querySelector('.integration-icon') : null;
-const noteTitle = note ? note.querySelector('b') : null;
-const noteHint = note ? note.querySelector('p') : null;
 
 // ---- Tuning ----
 const DRAG_STEP = 0.03;
@@ -19,29 +15,50 @@ const MAX_STEPS = 3;
 const CURSOR_MARGIN = 0.12;
 const TAP_MAX_MS = 700;
 const DOUBLE_PINCH_GAP_MS = 900;
+const RING_MIN = 16;   // ring size in px when fully pinched
+const RING_MAX = 46;   // ring size in px with an open hand
 const DIR = { left: 'left', right: 'right', away: 'backward', toward: 'forward' };
+// The finger cursor may only press these editor buttons.
+const UI_SELECTOR = '[data-add], #delete-object, #undo-action';
 
-const NONE_TITLE = 'No object selected';
-const NONE_HINT = 'Point at an object or a button with your right index finger and double pinch to select or press it. Left fist and move rotates the view. Both open palms, moved apart or together, zoom.';
-const SELECTED_HINT = 'Right pinch and move repositions it. Left fist rotates it. Left pinch and move up or down resizes it. Thumbs up restores its original position. Double pinch releases it. Guides: red = left/right, blue = closer/further.';
-
-// ---- Styles and cursor ----
+// ---- Cursor ----
 const style = document.createElement('style');
 style.textContent = `
-.threejs-mount{position:relative;display:block;min-height:560px;border-style:solid}
-.threejs-mount iframe{position:absolute;inset:0;width:100%;height:100%;min-height:0;border:0}
-#gesture-cursor{position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;
-  border:2px solid #ffd479;background:rgba(255,212,121,.15);box-shadow:0 0 12px rgba(255,212,121,.6);
+#gesture-cursor{position:absolute;left:0;top:0;width:var(--ring,40px);height:var(--ring,40px);border-radius:50%;
+  border:2px solid #5CE1E6;background:rgba(92,225,230,.08);box-shadow:0 0 14px rgba(92,225,230,.5);
   transform:translate(-50%,-50%);pointer-events:none;z-index:5;display:none;
-  transition:width .12s,height .12s,background .12s,border-color .12s,box-shadow .12s}
-#gesture-cursor.over{border-color:#4ddab0;box-shadow:0 0 16px rgba(77,218,176,.85)}
-#gesture-cursor.down{width:12px;height:12px;background:#ffd479}
+  transition:width .08s,height .08s,border-color .15s,background .15s,box-shadow .15s}
+#gesture-cursor::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
+  border-radius:50%;background:#5CE1E6;transition:background .15s}
+#gesture-cursor.over{border-color:#E6ECF7;box-shadow:0 0 16px rgba(230,236,247,.6)}
+#gesture-cursor.over::after{background:#E6ECF7}
+#gesture-cursor.down{background:rgba(92,225,230,.25)}
+#gesture-cursor.snap{border-color:#FFB347;background:rgba(255,179,71,.25);box-shadow:0 0 22px rgba(255,179,71,.85)}
+#gesture-cursor.snap::after{background:#FFB347}
 `;
 document.head.appendChild(style);
 
 const cursor = document.createElement('div');
 cursor.id = 'gesture-cursor';
 if (mount) mount.appendChild(cursor);
+
+let snapTimer = null;
+function snapCursor() {
+  cursor.classList.add('snap');
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => cursor.classList.remove('snap'), 350);
+}
+
+// The ring tightens as the pinch ratio drops.
+window.addEventListener('editor:pinch', (event) => {
+  const ratio = event.detail ? event.detail.ratio : null;
+  if (ratio == null || !Number.isFinite(ratio)) {
+    cursor.style.setProperty('--ring', `${(RING_MIN + RING_MAX) / 2}px`);
+    return;
+  }
+  const t = Math.max(0, Math.min(1, (ratio - 0.25) / 0.65));
+  cursor.style.setProperty('--ring', `${Math.round(RING_MIN + t * (RING_MAX - RING_MIN))}px`);
+});
 
 // ---- Helpers ----
 const clamp01 = (n) => Math.max(0, Math.min(1, n));
@@ -79,14 +96,14 @@ function prettyName(name) {
   return String(name).replace(/_(\d+)$/, ' $1').replace(/^./, (ch) => ch.toUpperCase());
 }
 
-// ---- Editor buttons under the cursor ----
+// ---- Editor buttons under the cursor (only Add, Delete selected, Undo) ----
 let uiHover = null;
 
 function ensureFrameStyle(doc) {
   if (doc.getElementById('gesture-ui-style')) return;
   const s = doc.createElement('style');
   s.id = 'gesture-ui-style';
-  s.textContent = '.gesture-hover{outline:2px solid #ffd479 !important;outline-offset:2px;filter:brightness(1.4)}';
+  s.textContent = '.gesture-hover{outline:2px solid #5CE1E6 !important;outline-offset:2px;filter:brightness(1.4)}';
   doc.head.appendChild(s);
 }
 
@@ -96,7 +113,7 @@ function uiTargetAt(nx, ny) {
     if (!doc) return null;
     ensureFrameStyle(doc);
     const el = doc.elementFromPoint(nx * frame.clientWidth, ny * frame.clientHeight);
-    const btn = el && el.closest ? el.closest('button') : null;
+    const btn = el && el.closest ? el.closest(UI_SELECTOR) : null;
     return btn && !btn.disabled ? btn : null;
   } catch (error) {
     return null;
@@ -113,19 +130,9 @@ function setUiHover(btn) {
 // ---- Selection status ----
 let selected = null;
 let carrying = false; // a newly added object follows the fingertip until the next double pinch
-let flashTimer = null;
-
-function renderStatus() {
-  if (noteTitle) noteTitle.textContent = selected ? `Selected: ${prettyName(selected)}` : NONE_TITLE;
-  if (noteHint) noteHint.textContent = selected ? SELECTED_HINT : NONE_HINT;
-  if (noteIcon) noteIcon.textContent = selected ? '●' : '○';
-}
 
 function flash(message) {
-  if (!noteHint) return;
-  noteHint.textContent = message;
-  clearTimeout(flashTimer);
-  flashTimer = setTimeout(renderStatus, 2500);
+  feedback(message);
 }
 
 window.addEventListener('message', (event) => {
@@ -137,11 +144,11 @@ window.addEventListener('message', (event) => {
   if (selected) {
     cursor.classList.remove('over');
     editorCall('clearHover');
+    feedback(`Selected ${prettyName(selected)}. Pinch and move to reposition it, or double pinch to release.`);
+  } else {
+    feedback('Nothing selected.');
   }
-  renderStatus();
 });
-
-renderStatus();
 
 // ---- Cursor and hover ----
 let lastCursor = { nx: 0.5, ny: 0.5 };
@@ -207,22 +214,24 @@ function stepAxis(acc, step, onStep) {
 }
 
 function pressButton(btn) {
-  const label = (btn.textContent || '').trim();
+  const label = (btn.textContent || '').trim().replace(/^\+\s*/, '');
   btn.click();
 
   if (btn.dataset && btn.dataset.add) {
     if (editorCall('placeSelectedAt', lastCursor.nx, lastCursor.ny)) {
       carrying = true;
-      flash(`${label.replace(/^\+\s*/, '')} added. Move your hand to position it, then double pinch to place it.`);
+      flash(`${label} added. Move your hand to position it, then double pinch to place it.`);
     } else {
-      flash(`${label.replace(/^\+\s*/, '')} added.`);
+      flash(`${label} added.`);
     }
   } else {
-    flash(`${label} activated.`);
+    flash(`${label} done.`);
   }
 }
 
 function handleDoublePinch(info) {
+  snapCursor();
+
   if (carrying) {
     carrying = false;
     flash('Object placed. Double pinch again to release the selection.');
@@ -251,13 +260,12 @@ function handleDoublePinch(info) {
 window.addEventListener('editor:command', (e) => {
   const c = e.detail;
   switch (c.action) {
-    // ---- Voice and typed commands ----
+    // ---- Voice, typed and menu commands ----
     case 'add':
-      if (c.target && send({ action: 'add', type: c.target })) feedback(`Added ${c.target}`);
+      if (c.target && send({ action: 'add', type: c.target })) feedback(`Added ${prettyName(c.target)}`);
       break;
     case 'select':
       selectTarget(c);
-      feedback(`Selected ${c.target}`);
       break;
     case 'delete':
       selectTarget(c);
@@ -282,6 +290,9 @@ window.addEventListener('editor:command', (e) => {
       break;
     case 'undo':
       send({ action: 'undo' });
+      break;
+    case 'deselect':
+      editorCall('gestureDeselect');
       break;
 
     // ---- Right hand: pinch to move, double pinch to select, press or release ----
