@@ -33,7 +33,7 @@
         <div class="control-group">
           <div class="slider-header"><label for="sensitivity">Drag sensitivity</label><output id="sensitivity-value" for="sensitivity">1.0</output></div>
           <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1">
-          <label class="check-row" id="handedness-toggle"><input id="swap-hands" type="checkbox" checked> Correct mirrored left/right labels</label>
+          <label class="check-row" id="handedness-toggle"><input id="swap-hands" type="checkbox" autocomplete="off"> Swap left/right hands (for rear camera)</label>
         </div>
         <div class="tracking-grid">
           <div><span>LEFT HAND</span><strong id="left-hand-status">Not detected</strong></div>
@@ -44,7 +44,7 @@
           <div><span>FRAME RATE</span><strong id="fps">—</strong></div>
         </div>
         <div class="mini-readouts"><span id="hand-status">No hands detected</span><span id="fingertip">—</span></div>
-        <div class="gesture-hint"><span>✋</span><div><b>Right hand</b><small>Pinch to grab and move</small></div><span>✊</span><div><b>Left hand</b><small>Fist + movement to rotate</small></div></div>
+        <div class="gesture-hint"><span>☝️</span><div><b>Right hand</b><small>Point to aim, double pinch to select, pinch to move</small></div><span>✊</span><div><b>Left hand</b><small>Fist to rotate, pinch up or down to resize</small></div></div>
       </section>
 
       <section class="panel editor-panel" aria-labelledby="editor-heading">
@@ -53,7 +53,7 @@
           <iframe id="editor-frame" src="./editor/" title="3D editor"
             style="width:100%;height:100%;min-height:420px;border:0;display:block"></iframe>
         </div>
-        <div class="integration-note"><span class="integration-icon">↗</span><div><b>Connected to the 3D editor</b><p>Voice and gesture commands are sent to the 3D scene through <code>editor:command</code>.</p></div></div>
+        <div class="integration-note"><span class="integration-icon">○</span><div><b>No object selected</b><p>Point at an object with your right index finger and double pinch to select it.</p></div></div>
       </section>
     </div>
 
