@@ -12,7 +12,6 @@ import { HandTracker } from "./gestures.js";
 import { drawHands, clearOverlay } from "./overlay.js";
 import { GestureRecognizer } from "./gestureRecognizer.js";
 import { GesturePointer } from "./pointer.js";
-import "./testScene.js";
 
 function getElement(id) {
   const element = document.getElementById(id);
@@ -213,8 +212,7 @@ const recognizers = {
 };
 
 const pointer = new GesturePointer({
-  onPointer: position => {
-    dispatchPointer(position);
+
     pointerPosition.textContent = position.visible
       ? `${position.x.toFixed(2)}, ${position.y.toFixed(2)}`
       : 'Not visible';
