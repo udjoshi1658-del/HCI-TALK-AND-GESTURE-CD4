@@ -3,80 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090f20">
-  <title>Talk & Gesture Studio · v2.1.1</title>
+  <meta name="theme-color" content="#060A14">
+  <title>Talk & Gesture</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-identity">
-      <span class="app-icon" aria-hidden="true">✳</span>
-      <div><h1>Talk <span class="gradient-amp">&</span> Gesture</h1><p>Multimodal interaction workspace</p></div>
-    </div>
-    <div class="app-meta"><span class="meta-dot"></span> PROTOTYPE <span class="version-tag">v2.1.1</span></div>
-  </header>
-
   <pre id="debug-errors" hidden aria-live="polite"></pre>
 
-  <main>
-    <div class="workspace">
-      <section class="panel camera-panel" aria-labelledby="camera-heading">
-        <div class="panel-top"><div><p class="eyebrow">INPUT 01 / GESTURE</p><h2 id="camera-heading">Webcam tracking</h2></div><span class="soft-label">LIVE FEED</span></div>
-        <div class="status-line"><span id="cam-indicator" class="indicator off"></span><span id="cam-status">Off</span></div>
-        <div class="camera-box">
-          <div class="camera-mirror"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
-          <p id="camera-placeholder" class="camera-placeholder">Enable your webcam to start tracking</p>
-          <span class="camera-corner camera-corner-tl"></span><span class="camera-corner camera-corner-br"></span>
+  <div class="stage">
+    <div id="threejs-mount" class="threejs-mount" role="region" aria-label="3D editor">
+      <iframe id="editor-frame" src="./editor/" title="3D editor"></iframe>
+    </div>
+
+    <header class="topbar">
+      <div class="brand">
+        <h1>Talk <span class="amp">&</span> Gesture</h1>
+        <p>Voice and hand control for a 3D room</p>
+      </div>
+      <div class="chips">
+        <span class="chip"><i id="cam-indicator" class="indicator off"></i><span id="cam-status">Webcam off</span></span>
+        <span class="chip"><i id="mic-indicator" class="indicator off"></i><span id="mic-status">Microphone off</span></span>
+      </div>
+    </header>
+
+    <section class="cam-card panel" aria-label="Webcam tracking">
+      <div class="camera-box">
+        <div class="camera-mirror">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
         </div>
-        <div class="button-row"><button class="primary-button" id="btn-cam-start" type="button">Enable webcam</button><button class="quiet-button" id="btn-cam-stop" type="button" disabled>Stop</button></div>
-        <p id="cam-message" class="message hidden"></p>
-        <div class="control-group">
+        <p id="camera-placeholder" class="camera-placeholder">Webcam is off</p>
+        <span class="tick tl"></span><span class="tick tr"></span><span class="tick bl"></span><span class="tick br"></span>
+      </div>
+      <div class="cam-row">
+        <button id="btn-cam-toggle" class="toggle" type="button">Start webcam</button>
+        <span id="hand-status" class="readout mono">No hands detected</span>
+      </div>
+      <p id="cam-message" class="message hidden"></p>
+    </section>
+
+    <section class="command-dock" aria-label="Voice commands">
+      <p id="match-result" class="result" aria-live="polite">Ready for your command.</p>
+      <p id="message" class="message hidden"></p>
+      <div class="transcripts mono">
+        <span id="interim" class="interim" aria-live="polite"></span>
+        <span id="final" class="final" aria-live="polite"></span>
+      </div>
+
+      <div id="command-menu" class="command-menu panel" hidden>
+        <div class="menu-field"><label for="cmd-select">Select</label><select id="cmd-select"></select></div>
+        <div class="menu-field"><label for="cmd-add">Add</label>
+          <select id="cmd-add">
+            <option value="">Add…</option>
+            <option value="sofa">Sofa</option>
+            <option value="table">Table</option>
+            <option value="lamp">Lamp</option>
+          </select>
+        </div>
+        <div class="menu-field"><label for="cmd-delete">Delete</label><select id="cmd-delete"></select></div>
+        <div class="menu-field"><label for="cmd-color">Colour</label>
+          <select id="cmd-color">
+            <option value="">Change colour…</option>
+            <option value="red">Red</option><option value="blue">Blue</option>
+            <option value="green">Green</option><option value="yellow">Yellow</option>
+            <option value="white">White</option><option value="black">Black</option>
+            <option value="purple">Purple</option><option value="orange">Orange</option>
+            <option value="brown">Brown</option>
+          </select>
+        </div>
+        <div class="menu-field"><label for="cmd-rotate">Rotate</label>
+          <select id="cmd-rotate">
+            <option value="">Rotate…</option>
+            <option value="left">Rotate left</option>
+            <option value="right">Rotate right</option>
+          </select>
+        </div>
+        <div class="menu-field"><label>Other</label><button id="cmd-undo" class="ghost" type="button">Undo</button></div>
+        <div id="delete-confirm" class="delete-confirm" hidden>
+          <span id="delete-confirm-text"></span>
+          <button id="delete-yes" class="danger" type="button">Delete</button>
+          <button id="delete-no" class="ghost" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div class="command-bar panel">
+        <button id="btn-voice-toggle" class="toggle" type="button">Start listening</button>
+        <form id="type-form" class="type-form">
+          <label for="type-input" class="sr-only">Type a command</label>
+          <input id="type-input" type="text" autocomplete="off" placeholder="Say or type a command, for example: select lamp">
+          <button type="submit" class="send">Send</button>
+        </form>
+        <button id="btn-commands" class="ghost" type="button" aria-expanded="false" aria-controls="command-menu">Commands ▾</button>
+      </div>
+    </section>
+  </div>
+
+  <main class="below">
+    <details id="dev-console" class="panel dev">
+      <summary>Developer console <span>Settings, readouts and event log</span></summary>
+      <div class="dev-grid">
+        <div class="dev-block">
+          <h3>Graphics</h3>
+          <label for="quality">Quality</label>
+          <select id="quality">
+            <option value="auto">Auto</option>
+            <option value="low">Low</option>
+            <option value="high">High</option>
+          </select>
+          <p id="quality-readout" class="mono">Auto · waiting for editor</p>
+        </div>
+        <div class="dev-block">
+          <h3>Hand tracking</h3>
           <div class="slider-header"><label for="sensitivity">Drag sensitivity</label><output id="sensitivity-value" for="sensitivity">1.0</output></div>
           <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1">
-          <label class="check-row" id="handedness-toggle"><input id="swap-hands" type="checkbox" autocomplete="off"> Swap left/right hands (for rear camera)</label>
+          <label class="check-row"><input id="swap-hands" type="checkbox" autocomplete="off"> Swap left/right hands (for rear camera)</label>
+          <div class="tracking-grid mono">
+            <div><span>Left hand</span><strong id="left-hand-status">Not detected</strong></div>
+            <div><span>Right hand</span><strong id="right-hand-status">Not detected</strong></div>
+            <div><span>Left gesture</span><strong id="left-gesture">none</strong></div>
+            <div><span>Right gesture</span><strong id="gesture-td">none</strong></div>
+            <div><span>Pinch ratio</span><strong id="pinch-td">-</strong></div>
+            <div><span>Frame rate</span><strong id="fps">-</strong></div>
+            <div><span>Fingertip</span><strong id="fingertip">-</strong></div>
+          </div>
         </div>
-        <div class="tracking-grid">
-          <div><span>LEFT HAND</span><strong id="left-hand-status">Not detected</strong></div>
-          <div><span>RIGHT HAND</span><strong id="right-hand-status">Not detected</strong></div>
-          <div><span>LEFT FIST</span><strong id="left-gesture">none</strong></div>
-          <div><span>RIGHT GESTURE</span><strong id="gesture-td">none</strong></div>
-          <div><span>PINCH RATIO</span><strong id="pinch-td">—</strong></div>
-          <div><span>FRAME RATE</span><strong id="fps">—</strong></div>
-        </div>
-        <div class="mini-readouts"><span id="hand-status">No hands detected</span><span id="fingertip">—</span></div>
-        <div class="gesture-hint"><span>☝️</span><div><b>Right hand</b><small>Point to aim, double pinch to select, pinch to move</small></div><span>✊</span><div><b>Left hand</b><small>Fist to rotate, pinch up or down to resize</small></div></div>
-      </section>
-
-      <section class="panel editor-panel" aria-labelledby="editor-heading">
-        <div class="panel-top"><div><p class="eyebrow">WORKSPACE 02 / 3D EDITOR</p><h2 id="editor-heading">3D scene</h2></div><span class="pending-tag">INTEGRATION IN PROGRESS</span></div>
-        <div id="threejs-mount" class="threejs-mount" role="region" aria-label="3D editor">
-          <iframe id="editor-frame" src="./editor/" title="3D editor"
-            style="width:100%;height:100%;min-height:420px;border:0;display:block"></iframe>
-        </div>
-        <div class="integration-note"><span class="integration-icon">○</span><div><b>No object selected</b><p>Point at an object with your right index finger and double pinch to select it.</p></div></div>
-      </section>
-    </div>
-
-    <div class="lower-grid">
-      <section class="panel voice-panel" aria-labelledby="voice-heading">
-        <div class="panel-top"><div><p class="eyebrow">INPUT 02 / SPEECH</p><h2 id="voice-heading">Voice commands</h2></div><span id="mic-indicator" class="indicator off"></span></div>
-        <div class="button-row"><button type="button" class="primary-button" id="btn-start">Start listening</button><button type="button" class="quiet-button" id="btn-stop" disabled>Stop</button></div>
-        <p class="muted-line">Microphone: <strong id="mic-status">Not started</strong></p><p id="message" class="message hidden"></p>
-        <div class="transcript-columns"><div><small>LIVE TRANSCRIPT</small><p id="interim" class="speech interim" aria-live="polite">&nbsp;</p></div><div><small>FINAL TRANSCRIPT</small><p id="final" class="speech final" aria-live="polite">&nbsp;</p></div></div>
-        <form id="type-form" class="command-form"><label for="type-input">Or type a command</label><div class="input-combo"><input id="type-input" type="text" autocomplete="off" placeholder="e.g. select circle / delete sphere"><button type="submit" class="primary-button">Send</button></div></form>
-        <div class="match-feedback"><span>RESULT</span><p id="match-result" class="speech" aria-live="polite">Ready for your command.</p></div>
-      </section>
-      <section class="panel examples-panel" aria-labelledby="examples-heading">
-        <div class="panel-top"><div><p class="eyebrow">REFERENCE / VOCABULARY</p><h2 id="examples-heading">Things you can say</h2></div><span class="soft-label">TAP TO TRY</span></div>
-        <p class="subtle-copy">Circle = sphere · box / cube = square · triangle = triangle. Only three unique shapes are allowed.</p>
-        <div class="commands-group"><h3>Select</h3><div class="chip-row"><button type="button" data-example="select circle">select circle</button><button type="button" data-example="select box">select box</button><button type="button" data-example="select triangle">select triangle</button></div></div>
-        <div class="commands-group"><h3>Create &amp; delete</h3><div class="chip-row"><button type="button" data-example="add triangle">add triangle</button><button type="button" data-example="delete sphere">delete sphere</button><button type="button" data-example="add sphere">add sphere</button><button type="button" data-example="delete selected">delete selected</button></div></div>
-        <div class="commands-group"><h3>Transform &amp; recover</h3><div class="chip-row"><button type="button" data-example="move left">move left</button><button type="button" data-example="make bigger">make bigger</button><button type="button" data-example="rotate right">rotate right</button><button type="button" data-example="change color to purple">change color to purple</button><button type="button" data-example="undo">undo</button><button type="button" data-example="reset scene">reset scene</button></div></div>
-      </section>
-    </div>
-    <details class="panel debug-panel"><summary>Developer console <span>Command events and troubleshooting</span></summary><div class="debug-grid"><div><h3>Last dispatched command</h3><pre id="last-command" class="code">(none yet)</pre></div><div><h3>Event log</h3><ul id="log" class="log"></ul></div></div></details>
+        <div class="dev-block"><h3>Last command</h3><pre id="last-command" class="code mono">(none yet)</pre></div>
+        <div class="dev-block"><h3>Event log</h3><ul id="log" class="log mono"></ul></div>
+      </div>
+    </details>
   </main>
-  <footer class="footer"><span>Talk &amp; Gesture · interaction research prototype</span><strong>Version 2.1.1</strong></footer>
 
   <script>
     function showDebugError(message) {
