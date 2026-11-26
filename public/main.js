@@ -24,8 +24,7 @@ function getElement(id) {
   return element;
 }
 
-const btnStart = getElement("btn-start");
-const btnStop = getElement("btn-stop");
+const btnVoiceToggle = getElement("btn-voice-toggle");
 const micIndicator = getElement("mic-indicator");
 const micStatus = getElement("mic-status");
 const messageBox = getElement("message");
@@ -36,8 +35,7 @@ const lastCommandBox = getElement("last-command");
 const typeForm = getElement("type-form");
 const typeInput = getElement("type-input");
 const logList = getElement("log");
-const btnCamStart = getElement("btn-cam-start");
-const btnCamStop = getElement("btn-cam-stop");
+const btnCamToggle = getElement("btn-cam-toggle");
 const camIndicator = getElement("cam-indicator");
 const camStatus = getElement("cam-status");
 const camMessage = getElement("cam-message");
@@ -55,6 +53,22 @@ const leftHandStatus = getElement("left-hand-status");
 const rightHandStatus = getElement("right-hand-status");
 const leftGesture = getElement("left-gesture");
 const swapHands = getElement("swap-hands");
+
+const editorFrame = getElement("editor-frame");
+const btnCommands = getElement("btn-commands");
+const commandMenu = getElement("command-menu");
+const cmdSelect = getElement("cmd-select");
+const cmdAdd = getElement("cmd-add");
+const cmdDelete = getElement("cmd-delete");
+const cmdColor = getElement("cmd-color");
+const cmdRotate = getElement("cmd-rotate");
+const cmdUndo = getElement("cmd-undo");
+const deleteConfirm = getElement("delete-confirm");
+const deleteConfirmText = getElement("delete-confirm-text");
+const deleteYes = getElement("delete-yes");
+const deleteNo = getElement("delete-no");
+const qualitySelect = getElement("quality");
+const qualityReadout = getElement("quality-readout");
 
 function log(text) {
   const item = document.createElement("li");
@@ -76,25 +90,32 @@ function showCamMessage(text) {
   camMessage.classList.toggle("hidden", !text);
 }
 
+// ---------------------------------------------------------------
+// Voice: one Start/Stop toggle
+// ---------------------------------------------------------------
+let voiceListening = false;
+
 function setStatus(status) {
   micIndicator.classList.remove("on", "off", "error");
 
   const listening = status === "listening";
   const unsupported = status === "unsupported";
   const failed = status === "error" || unsupported;
+  voiceListening = listening;
 
   micIndicator.classList.add(
     listening ? "on" : failed ? "error" : "off"
   );
 
-  btnStart.disabled = listening || unsupported;
-  btnStop.disabled = !listening;
+  btnVoiceToggle.disabled = unsupported;
+  btnVoiceToggle.textContent = listening ? "Stop listening" : "Start listening";
+  btnVoiceToggle.classList.toggle("live", listening);
 
   if (listening) {
-    micStatus.textContent = "Microphone active (listening)";
+    micStatus.textContent = "Listening";
     showMessage("");
   } else if (unsupported) {
-    micStatus.textContent = "Speech recognition unsupported";
+    micStatus.textContent = "Speech unsupported";
   } else if (status === "error") {
     micStatus.textContent = "Microphone error";
   } else {
@@ -184,8 +205,10 @@ const voice = new VoiceController({
   }
 });
 
-btnStart.addEventListener("click", () => voice.start());
-btnStop.addEventListener("click", () => voice.stop());
+btnVoiceToggle.addEventListener("click", () => {
+  if (voiceListening) voice.stop();
+  else voice.start();
+});
 
 typeForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -198,7 +221,154 @@ typeForm.addEventListener("submit", (event) => {
   }
 });
 
-// Separate recognizer state by physical hand: avoids cross-hand dropouts.
+// ---------------------------------------------------------------
+// Command menu: dropdowns run immediately (delete asks to confirm)
+// ---------------------------------------------------------------
+function prettyName(name) {
+  return String(name).replace(/_(\d+)$/, ' $1').replace(/^./, (ch) => ch.toUpperCase());
+}
+
+function fillObjectSelect(select, label, names) {
+  select.innerHTML = '';
+  select.add(new Option(label, ''));
+  for (const name of names) select.add(new Option(prettyName(name), name));
+  select.value = '';
+}
+
+function setObjects(names) {
+  const list = Array.isArray(names) ? names : [];
+  fillObjectSelect(cmdSelect, 'Select…', list);
+  fillObjectSelect(cmdDelete, 'Delete…', list);
+}
+
+setObjects(['sofa', 'table', 'lamp']);
+
+function runMenuCommand(command, message) {
+  dispatchCommand({ ...command, source: 'menu' });
+  matchResult.textContent = message;
+}
+
+cmdSelect.addEventListener('change', () => {
+  if (!cmdSelect.value) return;
+  const name = cmdSelect.value;
+  cmdSelect.value = '';
+  runMenuCommand({ action: 'select', target: name }, `Selected ${prettyName(name)}`);
+});
+
+cmdAdd.addEventListener('change', () => {
+  if (!cmdAdd.value) return;
+  const type = cmdAdd.value;
+  cmdAdd.value = '';
+  runMenuCommand({ action: 'add', target: type }, `Added ${prettyName(type)}`);
+});
+
+let pendingDelete = null;
+
+cmdDelete.addEventListener('change', () => {
+  if (!cmdDelete.value) return;
+  pendingDelete = cmdDelete.value;
+  cmdDelete.value = '';
+  deleteConfirmText.textContent = `Delete ${prettyName(pendingDelete)}?`;
+  deleteConfirm.hidden = false;
+});
+
+deleteYes.addEventListener('click', () => {
+  if (pendingDelete) {
+    runMenuCommand({ action: 'delete', target: pendingDelete }, `Deleted ${prettyName(pendingDelete)}`);
+  }
+  pendingDelete = null;
+  deleteConfirm.hidden = true;
+});
+
+deleteNo.addEventListener('click', () => {
+  pendingDelete = null;
+  deleteConfirm.hidden = true;
+});
+
+cmdColor.addEventListener('change', () => {
+  if (!cmdColor.value) return;
+  const color = cmdColor.value;
+  cmdColor.value = '';
+  runMenuCommand({ action: 'recolor', color }, `Colour: ${color}`);
+});
+
+cmdRotate.addEventListener('change', () => {
+  if (!cmdRotate.value) return;
+  const direction = cmdRotate.value;
+  cmdRotate.value = '';
+  runMenuCommand({ action: 'rotate', direction }, `Rotated ${direction}`);
+});
+
+cmdUndo.addEventListener('click', () => {
+  runMenuCommand({ action: 'undo' }, 'Undid the last change');
+});
+
+function setMenuOpen(open) {
+  commandMenu.hidden = !open;
+  btnCommands.setAttribute('aria-expanded', String(open));
+  btnCommands.textContent = open ? 'Commands ▴' : 'Commands ▾';
+}
+
+btnCommands.addEventListener('click', () => setMenuOpen(commandMenu.hidden));
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') setMenuOpen(false);
+});
+
+document.addEventListener('click', (event) => {
+  if (commandMenu.hidden) return;
+  if (commandMenu.contains(event.target) || btnCommands.contains(event.target)) return;
+  setMenuOpen(false);
+});
+
+// ---------------------------------------------------------------
+// Graphics quality (Auto / Low / High), kept in the developer console
+// ---------------------------------------------------------------
+const QUALITY_KEY = 'gesture-quality';
+let qualityMode = localStorage.getItem(QUALITY_KEY) || 'auto';
+if (!['auto', 'low', 'high'].includes(qualityMode)) qualityMode = 'auto';
+qualitySelect.value = qualityMode;
+
+function applyQualityToEditor() {
+  const w = editorFrame.contentWindow;
+  if (w && typeof w.setQuality === 'function') w.setQuality(qualityMode);
+}
+
+function refreshObjectsFromEditor() {
+  const w = editorFrame.contentWindow;
+  if (w && typeof w.listObjects === 'function') setObjects(w.listObjects());
+}
+
+qualitySelect.addEventListener('change', () => {
+  qualityMode = qualitySelect.value;
+  localStorage.setItem(QUALITY_KEY, qualityMode);
+  applyQualityToEditor();
+  log(`Graphics quality: ${qualityMode}`);
+});
+
+editorFrame.addEventListener('load', () => {
+  applyQualityToEditor();
+  refreshObjectsFromEditor();
+});
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin) return;
+  const data = event.data;
+  if (!data) return;
+
+  if (data.type === 'editor-objects') {
+    setObjects(data.names);
+  } else if (data.type === 'editor-quality') {
+    document.body.classList.toggle('fx-low', data.level === 'low');
+    const modeLabel = { auto: 'Auto', low: 'Low', high: 'High' }[data.mode] || data.mode;
+    const levelLabel = data.level === 'low' ? 'Low' : 'High';
+    qualityReadout.textContent = `${modeLabel} · running ${levelLabel} · ${data.fps || '-'} fps`;
+  }
+});
+
+// ---------------------------------------------------------------
+// Gesture recognisers and pointer
+// ---------------------------------------------------------------
 const recognizers = {
   right: new GestureRecognizer((gesture, previous) => {
     log(`RIGHT: ${previous} -> ${gesture}`);
@@ -238,16 +408,22 @@ function resetInteraction() {
   recognizers.left.reset();
   recognizers.right.reset();
   window.dispatchEvent(new CustomEvent('editor:hands-reset'));
+  window.dispatchEvent(new CustomEvent('editor:pinch', { detail: { ratio: null } }));
   gestureTd.textContent = 'none';
   leftGesture.textContent = 'none';
   pinchTd.textContent = '-';
   fingertipBox.textContent = '-';
-  handStatus.textContent = 'No hands detected (camera off)';
+  handStatus.textContent = 'No hands detected';
   leftHandStatus.textContent = 'Not detected';
   rightHandStatus.textContent = 'Not detected';
   fpsBox.textContent = '-';
   visibleHands = '';
 }
+
+// ---------------------------------------------------------------
+// Webcam: one Start/Stop toggle
+// ---------------------------------------------------------------
+let camTracking = false;
 
 function setCamStatus(status) {
   camIndicator.classList.remove("on", "off", "error");
@@ -255,30 +431,32 @@ function setCamStatus(status) {
   const starting =
     status === "loading" || status === "starting-camera";
   const tracking = status === "tracking";
+  camTracking = tracking;
 
-  btnCamStart.disabled = starting || tracking;
-  btnCamStop.disabled = !tracking;
+  btnCamToggle.disabled = starting;
+  btnCamToggle.textContent = tracking ? "Stop webcam" : starting ? "Starting…" : "Start webcam";
+  btnCamToggle.classList.toggle("live", tracking);
 
   camIndicator.classList.add(
     tracking ? "on" : status === "error" ? "error" : "off"
   );
 
   if (status === "loading") {
-    camStatus.textContent = "Loading hand-tracking model...";
-    camPlaceholder.textContent = "Loading...";
+    camStatus.textContent = "Loading model…";
+    camPlaceholder.textContent = "Loading hand-tracking model…";
     camPlaceholder.classList.remove("hidden");
     showCamMessage("");
   } else if (status === "starting-camera") {
-    camStatus.textContent = "Starting camera (allow access if asked)...";
-    camPlaceholder.textContent = "Starting camera...";
+    camStatus.textContent = "Starting camera…";
+    camPlaceholder.textContent = "Allow camera access if asked";
   } else if (tracking) {
-    camStatus.textContent = "Webcam on (tracking)";
+    camStatus.textContent = "Tracking";
     camPlaceholder.classList.add("hidden");
   } else if (status === "stopped" || status === "error") {
     camStatus.textContent =
-      status === "error" ? "Webcam error" : "Off";
+      status === "error" ? "Webcam error" : "Webcam off";
 
-    camPlaceholder.textContent = "Camera is off";
+    camPlaceholder.textContent = "Webcam is off";
     camPlaceholder.classList.remove("hidden");
     clearOverlay(overlay);
     resetInteraction();
@@ -314,6 +492,11 @@ const tracker = new HandTracker({
     pointer.update(rightL,rightResult.gesture,now);
     pointer.updateRotation(leftL,leftResult.gesture,now);
 
+    // Pinch ratio drives the ring around the cursor.
+    window.dispatchEvent(new CustomEvent('editor:pinch', {
+      detail: { ratio: rightResult.pinchRatio }
+    }));
+
     // Extra gestures (left pinch resize, two-palm zoom, thumbs up) listen here.
     window.dispatchEvent(new CustomEvent('editor:hands', {
       detail: {
@@ -338,7 +521,7 @@ const tracker = new HandTracker({
       fingertipBox.textContent = `${(1-tip.x).toFixed(2)}, ${tip.y.toFixed(2)}`;
     } else { fingertipBox.textContent='-'; }
     handStatus.textContent = `${hands.length} hand${hands.length===1?'':'s'} detected`;
-    fpsBox.textContent = `${info.fps} frames/second`;
+    fpsBox.textContent = `${info.fps} fps`;
 
     const visible = [left?'left':'',right?'right':''].filter(Boolean).join(' + ');
     if (visible !== visibleHands) {
@@ -360,13 +543,14 @@ tracker.swapHandedness = swapHands.checked;
 
 swapHands.addEventListener('change', () => {
   tracker.swapHandedness = swapHands.checked;
-  // If the user reverses left/right, release any old grabbed object.
   resetInteraction();
   log('Left/right swap: ' + (swapHands.checked ? 'on (rear camera)' : 'off (front camera)'));
 });
 
-btnCamStart.addEventListener("click", () => tracker.enable());
-btnCamStop.addEventListener("click", () => tracker.disable());
+btnCamToggle.addEventListener("click", () => {
+  if (camTracking) tracker.disable();
+  else tracker.enable();
+});
 
 if (!voice.supported) {
   setStatus("unsupported");
@@ -375,23 +559,20 @@ if (!voice.supported) {
     "You can still use typed commands and hand tracking."
   );
 } else {
-  log("Speech recognition available. Press Start Listening.");
+  log("Speech recognition available. Press Start listening.");
 }
 
 if (!navigator.mediaDevices?.getUserMedia) {
-  btnCamStart.disabled = true;
-  camStatus.textContent = "Camera access unavailable";
+  btnCamToggle.disabled = true;
+  camStatus.textContent = "Camera unavailable";
 
   showCamMessage(
-    "Camera access requires a supported browser and a secure context. Open localhost or an HTTPS page, then allow camera permission."
+    "Camera access needs a supported browser and a secure page (HTTPS or localhost)."
   );
 }
 
-log("Gesture v2.1.1 ready: point to aim, double pinch to select, pinch to move, left fist to rotate.");
-// Clickable speech examples also work without microphone permission.
-document.querySelectorAll('[data-example]').forEach(button => {
-  button.addEventListener('click', () => handleText(button.dataset.example, 'test'));
-});
+log("Ready: point to aim, double pinch to select or press, pinch to move, left fist to rotate.");
+
 window.addEventListener('editor:scene-feedback', event => {
   matchResult.textContent = event.detail.message;
   matchResult.dataset.state = event.detail.success ? 'ok' : 'error';
