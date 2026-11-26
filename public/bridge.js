@@ -7,23 +7,22 @@ const noteTitle = note ? note.querySelector('b') : null;
 const noteHint = note ? note.querySelector('p') : null;
 
 // ---- Tuning ----
-const DRAG_STEP = 0.03;          // right-hand travel per move step (0-1 of camera width)
-const MOVE_AMOUNT = 0.15;        // scene distance per move step
-const DRAG_START_DELAY_MS = 200; // ignore movement right after a pinch starts
-const ROT_STEP = 0.04;           // left-fist travel per object rotation step
-const ROT_DEGREES = 15;          // degrees per rotation step
-const ORBIT_SPEED = 3;           // radians of camera orbit per full-width fist travel
-const SCALE_STEP = 0.04;         // left-pinch vertical travel per resize step
-const SCALE_FACTOR = 1.06;       // size change per resize step
-const MAX_STEPS = 3;             // cap per event so fast hands do not flood the editor
-const CURSOR_MARGIN = 0.12;      // unused edge of the camera frame, so edges are reachable
-const TAP_MAX_MS = 700;          // longest pinch that still counts as a tap
-const DOUBLE_PINCH_GAP_MS = 900; // longest pause between the two taps
-// Direction names used by the editor ("Further" = backward, "Closer" = forward)
+const DRAG_STEP = 0.03;
+const MOVE_AMOUNT = 0.15;
+const DRAG_START_DELAY_MS = 200;
+const ROT_STEP = 0.04;
+const ROT_DEGREES = 15;
+const ORBIT_SPEED = 3;
+const SCALE_STEP = 0.04;
+const SCALE_FACTOR = 1.06;
+const MAX_STEPS = 3;
+const CURSOR_MARGIN = 0.12;
+const TAP_MAX_MS = 700;
+const DOUBLE_PINCH_GAP_MS = 900;
 const DIR = { left: 'left', right: 'right', away: 'backward', toward: 'forward' };
 
 const NONE_TITLE = 'No object selected';
-const NONE_HINT = 'Point at an object with your right index finger and double pinch to select it. Left fist and move rotates the view. Both open palms, moved apart or together, zoom.';
+const NONE_HINT = 'Point at an object or a button with your right index finger and double pinch to select or press it. Left fist and move rotates the view. Both open palms, moved apart or together, zoom.';
 const SELECTED_HINT = 'Right pinch and move repositions it. Left fist rotates it. Left pinch and move up or down resizes it. Thumbs up restores its original position. Double pinch releases it. Guides: red = left/right, blue = closer/further.';
 
 // ---- Styles and cursor ----
@@ -80,8 +79,40 @@ function prettyName(name) {
   return String(name).replace(/_(\d+)$/, ' $1').replace(/^./, (ch) => ch.toUpperCase());
 }
 
+// ---- Editor buttons under the cursor ----
+let uiHover = null;
+
+function ensureFrameStyle(doc) {
+  if (doc.getElementById('gesture-ui-style')) return;
+  const s = doc.createElement('style');
+  s.id = 'gesture-ui-style';
+  s.textContent = '.gesture-hover{outline:2px solid #ffd479 !important;outline-offset:2px;filter:brightness(1.4)}';
+  doc.head.appendChild(s);
+}
+
+function uiTargetAt(nx, ny) {
+  try {
+    const doc = frame.contentDocument;
+    if (!doc) return null;
+    ensureFrameStyle(doc);
+    const el = doc.elementFromPoint(nx * frame.clientWidth, ny * frame.clientHeight);
+    const btn = el && el.closest ? el.closest('button') : null;
+    return btn && !btn.disabled ? btn : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function setUiHover(btn) {
+  if (btn === uiHover) return;
+  if (uiHover) uiHover.classList.remove('gesture-hover');
+  uiHover = btn;
+  if (btn) btn.classList.add('gesture-hover');
+}
+
 // ---- Selection status ----
 let selected = null;
+let carrying = false; // a newly added object follows the fingertip until the next double pinch
 let flashTimer = null;
 
 function renderStatus() {
@@ -102,6 +133,7 @@ window.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || data.type !== 'editor-selection') return;
   selected = data.name || null;
+  if (!selected) carrying = false;
   if (selected) {
     cursor.classList.remove('over');
     editorCall('clearHover');
@@ -119,6 +151,7 @@ window.addEventListener('editor:pointer', (event) => {
   if (!p || !p.visible) {
     cursor.style.display = 'none';
     cursor.classList.remove('over', 'down');
+    setUiHover(null);
     editorCall('clearHover');
     return;
   }
@@ -132,7 +165,20 @@ window.addEventListener('editor:pointer', (event) => {
   cursor.style.left = `${rect.left - mountRect.left + nx * rect.width}px`;
   cursor.style.top = `${rect.top - mountRect.top + ny * rect.height}px`;
 
-  if (selected) {
+  if (carrying) {
+    setUiHover(null);
+    cursor.classList.add('over');
+    editorCall('placeSelectedAt', nx, ny);
+    return;
+  }
+
+  const btn = uiTargetAt(nx, ny);
+  setUiHover(btn);
+
+  if (btn) {
+    cursor.classList.add('over');
+    editorCall('clearHover');
+  } else if (selected) {
     cursor.classList.remove('over');
   } else {
     const hovered = editorCall('setHover', nx, ny);
@@ -160,7 +206,35 @@ function stepAxis(acc, step, onStep) {
   return acc;
 }
 
+function pressButton(btn) {
+  const label = (btn.textContent || '').trim();
+  btn.click();
+
+  if (btn.dataset && btn.dataset.add) {
+    if (editorCall('placeSelectedAt', lastCursor.nx, lastCursor.ny)) {
+      carrying = true;
+      flash(`${label.replace(/^\+\s*/, '')} added. Move your hand to position it, then double pinch to place it.`);
+    } else {
+      flash(`${label.replace(/^\+\s*/, '')} added.`);
+    }
+  } else {
+    flash(`${label} activated.`);
+  }
+}
+
 function handleDoublePinch(info) {
+  if (carrying) {
+    carrying = false;
+    flash('Object placed. Double pinch again to release the selection.');
+    return;
+  }
+
+  const btn = uiTargetAt(info.nx, info.ny);
+  if (btn) {
+    pressButton(btn);
+    return;
+  }
+
   const w = frame && frame.contentWindow;
   if (!w || typeof w.gestureSelectAt !== 'function') {
     flash('The 3D editor needs the latest build before gestures can select objects.');
@@ -210,7 +284,7 @@ window.addEventListener('editor:command', (e) => {
       send({ action: 'undo' });
       break;
 
-    // ---- Right hand: pinch to move, double pinch to select or release ----
+    // ---- Right hand: pinch to move, double pinch to select, press or release ----
     case 'grab': {
       const { nx, ny } = toEditorSpace(c.x, c.y);
       grabInfo = { t: performance.now(), nx, ny, moved: false };
@@ -221,12 +295,9 @@ window.addEventListener('editor:command', (e) => {
       break;
     }
     case 'drag': {
-      if (!selected || !grabInfo) break;
+      if (!selected || !grabInfo || carrying) break;
       if (performance.now() - grabInfo.t < DRAG_START_DELAY_MS) break;
-      if (!dragging) {
-        dragging = true;
-        editorCall('setDimOthers', true);
-      }
+      dragging = true;
       dragX += c.dx;
       dragY += c.dy;
       dragX = stepAxis(dragX, DRAG_STEP, (s) => {
@@ -241,10 +312,7 @@ window.addEventListener('editor:command', (e) => {
     }
     case 'release': {
       cursor.classList.remove('down');
-      if (dragging) {
-        editorCall('setDimOthers', false);
-        dragging = false;
-      }
+      dragging = false;
       const info = grabInfo;
       grabInfo = null;
       dragX = 0;
@@ -287,7 +355,7 @@ window.addEventListener('editor:command', (e) => {
       break;
     case 'scale-drag':
       if (!selected) break;
-      scaleAcc += -c.dy; // hand up = positive = larger
+      scaleAcc += -c.dy;
       scaleAcc = stepAxis(scaleAcc, SCALE_STEP, (s) =>
         send({ action: 'scale', amount: s > 0 ? SCALE_FACTOR : 1 / SCALE_FACTOR }));
       break;
