@@ -203,7 +203,7 @@ const recognizers = {
   right: new GestureRecognizer((gesture, previous) => {
     log(`RIGHT: ${previous} -> ${gesture}`);
     dispatchCommand({action:'gesture',name:`right:${gesture}`,previous,source:'gesture'});
-  }),
+  }, { framesToConfirm: 2, framesToRelease: 3, pinchOn: 0.30, pinchOff: 0.42 }),
   left: new GestureRecognizer((gesture, previous) => {
     log(`LEFT: ${previous} -> ${gesture}`);
     dispatchCommand({action:'gesture',name:`left:${gesture}`,previous,source:'gesture'});
