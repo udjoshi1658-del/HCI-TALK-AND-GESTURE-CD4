@@ -1,1 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090f20">
+  <title>Talk & Gesture Studio · v2.1.1</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-identity">
+      <span class="app-icon" aria-hidden="true">✳</span>
+      <div><h1>Talk <span class="gradient-amp">&</span> Gesture</h1><p>Multimodal interaction workspace</p></div>
+    </div>
+    <div class="app-meta"><span class="meta-dot"></span> PROTOTYPE <span class="version-tag">v2.1.1</span></div>
+  </header>
 
+  <pre id="debug-errors" hidden aria-live="polite"></pre>
+
+  <main>
+    <div class="workspace">
+      <section class="panel camera-panel" aria-labelledby="camera-heading">
+        <div class="panel-top"><div><p class="eyebrow">INPUT 01 / GESTURE</p><h2 id="camera-heading">Webcam tracking</h2></div><span class="soft-label">LIVE FEED</span></div>
+        <div class="status-line"><span id="cam-indicator" class="indicator off"></span><span id="cam-status">Off</span></div>
+        <div class="camera-box">
+          <div class="camera-mirror"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
+          <p id="camera-placeholder" class="camera-placeholder">Enable your webcam to start tracking</p>
+          <span class="camera-corner camera-corner-tl"></span><span class="camera-corner camera-corner-br"></span>
+        </div>
+        <div class="button-row"><button class="primary-button" id="btn-cam-start" type="button">Enable webcam</button><button class="quiet-button" id="btn-cam-stop" type="button" disabled>Stop</button></div>
+        <p id="cam-message" class="message hidden"></p>
+        <div class="control-group">
+          <div class="slider-header"><label for="sensitivity">Drag sensitivity</label><output id="sensitivity-value" for="sensitivity">1.0</output></div>
+          <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1">
+          <label class="check-row" id="handedness-toggle"><input id="swap-hands" type="checkbox" checked> Correct mirrored left/right labels</label>
+        </div>
+        <div class="tracking-grid">
+          <div><span>LEFT HAND</span><strong id="left-hand-status">Not detected</strong></div>
+          <div><span>RIGHT HAND</span><strong id="right-hand-status">Not detected</strong></div>
+          <div><span>LEFT FIST</span><strong id="left-gesture">none</strong></div>
+          <div><span>RIGHT GESTURE</span><strong id="gesture-td">none</strong></div>
+          <div><span>PINCH RATIO</span><strong id="pinch-td">—</strong></div>
+          <div><span>FRAME RATE</span><strong id="fps">—</strong></div>
+        </div>
+        <div class="mini-readouts"><span id="hand-status">No hands detected</span><span id="fingertip">—</span></div>
+        <div class="gesture-hint"><span>✋</span><div><b>Right hand</b><small>Pinch to grab and move</small></div><span>✊</span><div><b>Left hand</b><small>Fist + movement to rotate</small></div></div>
+      </section>
+
+      <section class="panel editor-panel" aria-labelledby="editor-heading">
+        <div class="panel-top"><div><p class="eyebrow">WORKSPACE 02 / 3D EDITOR</p><h2 id="editor-heading">3D scene</h2></div><span class="pending-tag">INTEGRATION PENDING</span></div>
+        <div id="threejs-mount" class="threejs-mount" role="region" aria-label="Reserved Three.js integration area">
+          <div class="grid-accent" aria-hidden="true"></div>
+          <div class="mount-placeholder"><div class="mount-symbol" aria-hidden="true">◇</div><h3>Your Three.js scene goes here</h3><p>This area is intentionally reserved for your colleague's 3D editor. No placeholder model is controlling the real scene.</p><div class="mount-label">#threejs-mount</div></div>
+        </div>
+        <div class="integration-note"><span class="integration-icon">↗</span><div><b>Ready for integration</b><p>Commands are broadcast via <code>editor:command</code>. Shape and selection state is available via <code>editor:scene-state</code>.</p></div></div>
+      </section>
+
+      <section class="panel test-panel" aria-labelledby="test-heading">
+        <div class="panel-top"><div><p class="eyebrow">WORKSPACE 03 / 2D TEST</p><h2 id="test-heading">Gesture test area</h2></div><span class="soft-label" id="shape-count">2 / 3 shapes</span></div>
+        <div class="test-toolbar"><span id="test-selected">Selected: square</span><span class="pointer-readout">Pointer <span id="pointer-position">Not visible</span></span></div>
+        <div id="test-stage" role="group" aria-label="2D interaction test area, not the Three.js scene"></div>
+        <p id="scene-status" class="scene-status" aria-live="polite">Choose a shape or try a command.</p>
+        <div class="shape-management"><div class="subsection-head"><h3>Scene objects</h3><span>ONE OF EACH</span></div><div id="shape-list"></div></div>
+        <div class="button-row subtle-actions"><button type="button" id="btn-delete-selected" class="quiet-button">Delete selected</button><button type="button" id="btn-undo" class="quiet-button">Undo</button><button type="button" id="btn-reset" class="quiet-button">Reset</button></div>
+      </section>
+    </div>
+
+    <div class="lower-grid">
+      <section class="panel voice-panel" aria-labelledby="voice-heading">
+        <div class="panel-top"><div><p class="eyebrow">INPUT 02 / SPEECH</p><h2 id="voice-heading">Voice commands</h2></div><span id="mic-indicator" class="indicator off"></span></div>
+        <div class="button-row"><button type="button" class="primary-button" id="btn-start">Start listening</button><button type="button" class="quiet-button" id="btn-stop" disabled>Stop</button></div>
+        <p class="muted-line">Microphone: <strong id="mic-status">Not started</strong></p><p id="message" class="message hidden"></p>
+        <div class="transcript-columns"><div><small>LIVE TRANSCRIPT</small><p id="interim" class="speech interim" aria-live="polite">&nbsp;</p></div><div><small>FINAL TRANSCRIPT</small><p id="final" class="speech final" aria-live="polite">&nbsp;</p></div></div>
+        <form id="type-form" class="command-form"><label for="type-input">Or type a command</label><div class="input-combo"><input id="type-input" type="text" autocomplete="off" placeholder="e.g. select circle / delete sphere"><button type="submit" class="primary-button">Send</button></div></form>
+        <div class="match-feedback"><span>RESULT</span><p id="match-result" class="speech" aria-live="polite">Ready for your command.</p></div>
+      </section>
+      <section class="panel examples-panel" aria-labelledby="examples-heading">
+        <div class="panel-top"><div><p class="eyebrow">REFERENCE / VOCABULARY</p><h2 id="examples-heading">Things you can say</h2></div><span class="soft-label">TAP TO TRY</span></div>
+        <p class="subtle-copy">Circle = sphere · box / cube = square · triangle = triangle. Only three unique shapes are allowed.</p>
+        <div class="commands-group"><h3>Select</h3><div class="chip-row"><button type="button" data-example="select circle">select circle</button><button type="button" data-example="select box">select box</button><button type="button" data-example="select triangle">select triangle</button></div></div>
+        <div class="commands-group"><h3>Create &amp; delete</h3><div class="chip-row"><button type="button" data-example="add triangle">add triangle</button><button type="button" data-example="delete sphere">delete sphere</button><button type="button" data-example="add sphere">add sphere</button><button type="button" data-example="delete selected">delete selected</button></div></div>
+        <div class="commands-group"><h3>Transform &amp; recover</h3><div class="chip-row"><button type="button" data-example="move left">move left</button><button type="button" data-example="make bigger">make bigger</button><button type="button" data-example="rotate right">rotate right</button><button type="button" data-example="change color to purple">change color to purple</button><button type="button" data-example="undo">undo</button><button type="button" data-example="reset scene">reset scene</button></div></div>
+      </section>
+    </div>
+    <details class="panel debug-panel"><summary>Developer console <span>Command events and troubleshooting</span></summary><div class="debug-grid"><div><h3>Last dispatched command</h3><pre id="last-command" class="code">(none yet)</pre></div><div><h3>Event log</h3><ul id="log" class="log"></ul></div></div></details>
+  </main>
+  <footer class="footer"><span>Talk &amp; Gesture · interaction research prototype</span><strong>Version 2.1.1</strong></footer>
+
+  <script>
+    function showDebugError(message) {
+      const box=document.getElementById('debug-errors');box.hidden=false;
+      box.textContent+=String(message)+'\n\n';
+    }
+    window.addEventListener('error', event=>{
+      if(event.message)showDebugError(event.message+'\n'+(event.filename||'')+':'+event.lineno+':'+event.colno);
+      else if(event.target){const url=event.target.src||event.target.href;if(url)showDebugError('Failed to load: '+url);}
+    },true);
+    window.addEventListener('unhandledrejection',event=>showDebugError(event.reason?.stack||event.reason?.message||String(event.reason)));
+  </script>
+  <script type="module">import('./main.js').catch(error=>showDebugError('Could not start main.js:\n'+(error.stack||error.message||String(error))));</script>
+</body>
+</html>
