@@ -50,7 +50,6 @@ const gestureTd = getElement("gesture-td");
 const pinchTd = getElement("pinch-td");
 const sensitivitySlider = getElement("sensitivity");
 const sensitivityValue = getElement("sensitivity-value");
-const pointerPosition = getElement("pointer-position");
 const leftHandStatus = getElement("left-hand-status");
 const rightHandStatus = getElement("right-hand-status");
 const leftGesture = getElement("left-gesture");
@@ -130,8 +129,6 @@ function handleText(text, source) {
     log("ERROR: command rejected");
     return;
   }
-
-// The test scene responds with the actual result (e.g. shape already exists).
 }
 
 let lastMotionDisplayTime = 0;
@@ -212,10 +209,8 @@ const recognizers = {
 };
 
 const pointer = new GesturePointer({
-
-    pointerPosition.textContent = position.visible
-      ? `${position.x.toFixed(2)}, ${position.y.toFixed(2)}`
-      : 'Not visible';
+  onPointer: position => {
+    dispatchPointer(position);
   },
   onGrab: ({x,y}) => dispatchCommand({action:'grab',x,y,source:'gesture'}),
   onDrag: ({x,y,dx,dy,totalDx,totalDy}) => dispatchCommand({action:'drag',x,y,dx,dy,totalDx,totalDy,source:'gesture'}),
@@ -371,7 +366,7 @@ if (!navigator.mediaDevices?.getUserMedia) {
   );
 }
 
-log("Gesture v2.1.1 ready: right pinch moves; left fist rotates; voice manages 3 shapes.");
+log("Gesture v2.1.1 ready: right pinch moves; left fist rotates the selected 3D object.");
 // Clickable speech examples also work without microphone permission.
 document.querySelectorAll('[data-example]').forEach(button => {
   button.addEventListener('click', () => handleText(button.dataset.example, 'test'));
