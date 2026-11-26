@@ -53,16 +53,7 @@
           <iframe id="editor-frame" src="./editor/" title="3D editor"
             style="width:100%;height:100%;min-height:420px;border:0;display:block"></iframe>
         </div>
-        <div class="integration-note"><span class="integration-icon">↗</span><div><b>Ready for integration</b><p>Commands are broadcast via <code>editor:command</code>. Shape and selection state is available via <code>editor:scene-state</code>.</p></div></div>
-      </section>
-
-      <section class="panel test-panel" aria-labelledby="test-heading">
-        <div class="panel-top"><div><p class="eyebrow">WORKSPACE 03 / 2D TEST</p><h2 id="test-heading">Gesture test area</h2></div><span class="soft-label" id="shape-count">2 / 3 shapes</span></div>
-        <div class="test-toolbar"><span id="test-selected">Selected: square</span><span class="pointer-readout">Pointer <span id="pointer-position">Not visible</span></span></div>
-        <div id="test-stage" role="group" aria-label="2D interaction test area, not the Three.js scene"></div>
-        <p id="scene-status" class="scene-status" aria-live="polite">Choose a shape or try a command.</p>
-        <div class="shape-management"><div class="subsection-head"><h3>Scene objects</h3><span>ONE OF EACH</span></div><div id="shape-list"></div></div>
-        <div class="button-row subtle-actions"><button type="button" id="btn-delete-selected" class="quiet-button">Delete selected</button><button type="button" id="btn-undo" class="quiet-button">Undo</button><button type="button" id="btn-reset" class="quiet-button">Reset</button></div>
+        <div class="integration-note"><span class="integration-icon">↗</span><div><b>Connected to the 3D editor</b><p>Voice and gesture commands are sent to the 3D scene through <code>editor:command</code>.</p></div></div>
       </section>
     </div>
 
